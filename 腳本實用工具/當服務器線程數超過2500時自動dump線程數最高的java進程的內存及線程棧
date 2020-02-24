@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# 來源: https://blog.csdn.net/qianghaohao/article/details/80379118 
+# 服務器線程數達到 2500 以上時 dump 線程數最多的 java 進程的線程及內存
+#
+source ~/.bashrc
+cur_thread_num=`ps -efL | wc -l`
+if [ $cur_thread_num -le 2500 ]; then
+    exit 0
+fi
+
+cur_date=`date +"%Y-%m-%d_%H-%M-%S"`
+cd ./dumpfile
+# 服務器當前線程 dump 到文件:按照線程數由大到小排序顯示
+ps -efL --sort -nlwp > server_thread_dump_$cur_date
+# dump 線程數最多的 jvm 的線程及內存
+most_thread_num_pid=`cat server_thread_dump_$cur_date | sed -n '2p' | awk '{print $2}'`
+nohup jstack -l $most_thread_num_pid > java_app_thread_dump_${cur_date}_pid_${most_thread_num_pid} &
+nohup jmap -dump:format=b,file=java_app_mem_dump_${cur_date}_pid_${most_thread_num_pid} $most_thread_num_pid &
+
+exit 0
